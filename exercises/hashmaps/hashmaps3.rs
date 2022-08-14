@@ -14,15 +14,35 @@
 
 // Execute `rustlings hint hashmaps3` or use the `hint` watch subcommand for a hint.
 
-// I AM NOT DONE
-
 use std::collections::HashMap;
 
 // A structure to store team name and its goal details.
+#[derive(Default)]
 struct Team {
     name: String,
     goals_scored: u8,
     goals_conceded: u8,
+}
+
+type Scores = HashMap<String, Team>;
+
+type TeamMutator = dyn Fn(&mut Team) -> ();
+
+fn insert_and_mutate<'a, F>(team_name: &'a String, scoreboard: &mut Scores, m: &'a F) 
+where 
+    F: Fn(&mut Team) {
+    let team = match scoreboard.get_mut(team_name.as_str()) {
+        Some(team) => team,
+        None => {
+            let team = Team{name: team_name.to_string(), ..Default::default()};
+            scoreboard.insert(team_name.to_string(), team);
+            match scoreboard.get_mut(team_name.as_str()) {
+                Some(team) => team,
+                None => panic!("failed to insert team!!!! :'("),
+            }
+        },
+    };
+    m(team);
 }
 
 fn build_scores_table(results: String) -> HashMap<String, Team> {
@@ -35,11 +55,21 @@ fn build_scores_table(results: String) -> HashMap<String, Team> {
         let team_1_score: u8 = v[2].parse().unwrap();
         let team_2_name = v[1].to_string();
         let team_2_score: u8 = v[3].parse().unwrap();
-        // TODO: Populate the scores table with details extracted from the
         // current line. Keep in mind that goals scored by team_1
         // will be number of goals conceded from team_2, and similarly
         // goals scored by team_2 will be the number of goals conceded by
         // team_1.
+
+        insert_and_mutate(&team_1_name, &mut scores, &|t| {
+
+            t.goals_scored += team_1_score;
+            t.goals_conceded += team_2_score;
+        });
+
+        insert_and_mutate(&team_2_name, &mut scores, &|t| {
+            t.goals_scored += team_2_score;
+            t.goals_conceded += team_1_score;
+        });
     }
     scores
 }
